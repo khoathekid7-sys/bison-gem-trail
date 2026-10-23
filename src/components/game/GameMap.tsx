@@ -1,6 +1,6 @@
 // Browser-only MapLibre map (lazy-loaded). Recolors an OpenFreeMap style into the Bison Quest palette.
 import { useEffect, useRef, useState } from "react";
-import maplibregl from "maplibre-gl";
+import * as maplibregl from "maplibre-gl";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
 import "maplibre-gl/dist/maplibre-gl.css";
 import bison from "@/assets/bison.png";
@@ -10,9 +10,9 @@ import { SchematicMap } from "./SchematicMap";
 
 maplibregl.setWorkerUrl(workerUrl);
 
-function cssVar(name: string) {
-  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-}
+// MapLibre's style specification accepts hex/rgb colors, not CSS oklch()
+// custom-property values used by the rest of the app.
+const palette = { mint: "#d9f1e8", cream: "#fbf7eb", navy: "#263759", cyan: "#59c7e5" };
 function circle(lat: number, lng: number, r: number) {
   const pts: [number, number][] = [];
   for (let i = 0; i <= 64; i++) {
@@ -22,7 +22,7 @@ function circle(lat: number, lng: number, r: number) {
   return { type: "Feature" as const, properties: {}, geometry: { type: "Polygon" as const, coordinates: [pts] } };
 }
 
-export default function GameMap({ stops, fix, focusId, onSelect }: { stops: MapStop[]; fix: Fix | null; focusId?: string; onSelect?: (id: string) => void }) {
+export default function GameMap({ stops, fix, focusId, onSelect }: { stops: MapStop[]; fix: Fix | null; focusId?: string | undefined; onSelect?: ((id: string) => void) | undefined }) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const markers = useRef<maplibregl.Marker[]>([]);
@@ -48,12 +48,12 @@ export default function GameMap({ stops, fix, focusId, onSelect }: { stops: MapS
     }
     map.current = m;
     const timeout = setTimeout(() => !m.loaded() && setFailed(true), 12000);
-    m.on("error", (e) => {
-      if (!m.isStyleLoaded() && (e as { error?: Error }).error) setFailed(true);
-    });
+    // Individual tile errors can fire before the style finishes loading. The
+    // deadline below handles a genuinely unavailable map without hiding a
+    // healthy map because one tile failed.
     m.on("load", () => {
       clearTimeout(timeout);
-      const mint = cssVar("--mint"), cream = cssVar("--cream"), navy = cssVar("--navy"), cyan = cssVar("--cyan");
+      const { mint, cream, navy, cyan } = palette;
       for (const layer of m.getStyle().layers ?? []) {
         const id = layer.id;
         try {
@@ -83,7 +83,7 @@ export default function GameMap({ stops, fix, focusId, onSelect }: { stops: MapS
     markers.current = stops.map((s) => {
       const b = document.createElement("button");
       b.className = "bq-gem";
-      b.dataset.state = s.state;
+      b.dataset["state"] = s.state;
       b.setAttribute("aria-label", s.state === "locked" ? "Locked gem" : `${s.label} gem${s.state === "done" ? " (collected)" : ""}`);
       const img = document.createElement("img");
       img.src = s.gemImg;
@@ -118,5 +118,5 @@ export default function GameMap({ stops, fix, focusId, onSelect }: { stops: MapS
   }, [focusId, ready, stops]);
 
   if (failed) return <SchematicMap stops={stops} fix={fix} note="Map tiles unavailable — showing campus schematic" />;
-  return <div ref={el} className="absolute inset-0" aria-label="Campus map" role="region" />;
+  return <div ref={el} style={{ position: "absolute", inset: 0 }} aria-label="Campus map" role="region" />;
 }

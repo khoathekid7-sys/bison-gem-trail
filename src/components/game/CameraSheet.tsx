@@ -10,7 +10,7 @@ export function CameraSheet({ demo, stopId, onClose, onImage }: { demo: boolean;
   const stream = useRef<MediaStream | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
-  const [status, setStatus] = useState<"starting" | "live" | "denied" | "unsupported">("starting");
+  const [status, setStatus] = useState<"starting" | "live" | "denied" | "unsupported">(demo ? "unsupported" : "starting");
   const [flash, setFlash] = useState(false);
 
   const stop = () => { stream.current?.getTracks().forEach((t) => t.stop()); stream.current = null; };
@@ -31,7 +31,7 @@ export function CameraSheet({ demo, stopId, onClose, onImage }: { demo: boolean;
 
   useEffect(() => {
     closeRef.current?.focus();
-    void begin();
+    if (!demo) void begin();
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", onKey);
     return () => { stop(); window.removeEventListener("keydown", onKey); };
@@ -63,7 +63,7 @@ export function CameraSheet({ demo, stopId, onClose, onImage }: { demo: boolean;
       <div className="pt-safe flex items-center justify-between px-4 pb-2">
         <button ref={closeRef} onClick={close} className="grid h-11 w-11 place-items-center rounded-full bg-card/15" aria-label="Close camera"><X /></button>
         <p className="font-display text-lg">Frame the landmark</p>
-        <button onClick={begin} className="grid h-11 w-11 place-items-center rounded-full bg-card/15" aria-label="Restart camera"><RefreshCw className="h-5 w-5" /></button>
+        <button onClick={begin} className="grid h-11 w-11 place-items-center rounded-full bg-card/15" aria-label={demo ? "Use camera" : "Restart camera"}><RefreshCw className="h-5 w-5" /></button>
       </div>
       <div className="relative flex-1 overflow-hidden">
         <video ref={video} playsInline muted autoPlay className="absolute inset-0 h-full w-full object-cover" aria-label="Camera viewfinder" />
@@ -73,7 +73,7 @@ export function CameraSheet({ demo, stopId, onClose, onImage }: { demo: boolean;
             <div className="max-w-xs space-y-3">
               {status === "starting" && <p>Starting camera…</p>}
               {status === "denied" && <><p className="font-display text-xl">Camera access is off</p><p className="text-sm opacity-85">Allow camera for this site in your browser settings, then tap Retry — or choose a photo below.</p><button onClick={begin} className="h-11 rounded-full bg-card px-5 font-bold text-navy">Retry</button></>}
-              {status === "unsupported" && <p className="text-sm opacity-85">Live camera isn’t available here. Use “Take or choose photo” below.</p>}
+              {status === "unsupported" && <p className="text-sm opacity-85">{demo ? "Choose a demo sample or use your own photo below. Tap the camera button above to try your camera." : "Live camera isn’t available here. Use “Take or choose photo” below."}</p>}
             </div>
           </div>
         )}

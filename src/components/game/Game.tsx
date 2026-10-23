@@ -1,4 +1,4 @@
-import { lazy, Suspense, useMemo, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { ClientOnly } from "@tanstack/react-router";
 import { Camera, Compass, Gem, Images, Lightbulb, Navigation, RefreshCw, Download, Share2, RotateCcw, Check, X, MapPin } from "lucide-react";
 import bison from "@/assets/bison.png";
@@ -161,8 +161,8 @@ function Preview({ g }: { g: G }) {
         {g.phase === "verifying" && <p role="status" className="text-center font-display text-lg">Checking location and photo…</p>}
         {v && (
           <div aria-live="polite" className="space-y-2">
-            <Row ok={v.locationPassed} label="Location checked" />
-            <Row ok={v.photoPassed} label={v.photoChecked === false ? "Photo not checked yet" : "Photo matched"} />
+            <Row ok={v.locationPassed} label={v.locationPassed ? "Location checked" : "Location not verified"} />
+            <Row ok={v.photoPassed} label={v.photoChecked === false ? "Photo not checked yet" : v.photoPassed ? "Photo matched" : "Photo did not match"} />
             <p className="text-sm">{v.reason}</p>
             {v.retryTip && <p className="text-sm text-muted-foreground">Tip: {v.retryTip}</p>}
             {g.mode === "live" && v.photoChecked && v.referenceBased === false && <p className="text-xs text-muted-foreground">Checked against a written landmark description (no organizer reference photos yet), so matching is approximate.</p>}
@@ -235,7 +235,7 @@ function Album({ g }: { g: G }) {
     downloadBlob(b, name);
   };
   const zip = async () => {
-    const files = await Promise.all(list.map(async (s, i) => ({ name: `bison-quest-${i + 1}-${s.id}.jpg`, data: new Uint8Array(await g.photos[s.id].blob.arrayBuffer()) })));
+    const files = await Promise.all(list.map(async (s, i) => ({ name: `bison-quest-${i + 1}-${s.id}.jpg`, data: new Uint8Array(await g.photos[s.id]!.blob.arrayBuffer()) })));
     downloadBlob(new Blob([makeZip(files) as BlobPart], { type: "application/zip" }), "bison-quest-album.zip");
   };
   return (
@@ -243,18 +243,28 @@ function Album({ g }: { g: G }) {
       <div className="flex items-end justify-between"><h2 className="font-display text-2xl">My album</h2><p className="text-sm font-bold">{list.length}/2 · {list.reduce((a, s) => a + s.xp, 0)} XP</p></div>
       {g.completed && <p className="rotate-[-2deg] rounded-2xl border-4 border-dashed border-primary p-2 text-center font-display text-lg text-primary">{g.mode === "demo" ? "DEMO COMPLETE · simulated" : `QUEST COMPLETE · ${TOTAL_XP} XP`}</p>}
       {list.length === 0 && <p className="rounded-2xl bg-muted p-4 text-sm">No photos yet. Your accepted captures appear here — private to this device.</p>}
-      {list.map((s) => { const p = g.photos[s.id]; const url = URL.createObjectURL(p.blob); return (
-        <figure key={s.id} className="overflow-hidden rounded-3xl bg-muted">
-          <img src={url} alt={`Your photo at ${s.place}`} className="w-full" onLoad={() => setTimeout(() => URL.revokeObjectURL(url), 1000)} />
-          <figcaption className="flex items-center gap-2 p-3"><img src={s.gemImg} alt="" className="h-8 w-8" /><div className="flex-1"><p className="font-bold">{s.gemName}</p><p className="text-xs text-muted-foreground">{s.place} · {new Date(p.takenAt).toLocaleString()}</p></div>
-            <button onClick={() => downloadBlob(p.blob, `bison-quest-${s.id}.jpg`)} aria-label={`Download ${s.gemName} photo`} className="grid h-11 w-11 place-items-center rounded-full bg-card"><Download className="h-4 w-4" /></button>
-            <button onClick={() => share(p.blob, `bison-quest-${s.id}.jpg`)} aria-label={`Share ${s.gemName} photo`} className="grid h-11 w-11 place-items-center rounded-full bg-card"><Share2 className="h-4 w-4" /></button>
-          </figcaption>
-        </figure>); })}
+      {list.map((s) => <AlbumPhoto key={s.id} stop={s} photo={g.photos[s.id]!} share={share} />)}
       {list.length > 0 && <button onClick={zip} className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-secondary font-bold text-secondary-foreground"><Download className="h-4 w-4" />Download album (ZIP)</button>}
       {g.mode && <ResetBtn g={g} />}
     </div>
   );
+}
+
+function AlbumPhoto({ stop, photo, share }: { stop: (typeof STOPS)[number]; photo: NonNullable<G["photos"][string]>; share: (blob: Blob, name: string) => Promise<void> }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const objectUrl = URL.createObjectURL(photo.blob);
+    setUrl(objectUrl);
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [photo.blob]);
+  const name = `bison-quest-${stop.id}.jpg`;
+  return <figure className="overflow-hidden rounded-3xl bg-muted">
+    {url && <img src={url} alt={`Your photo at ${stop.place}`} className="w-full" />}
+    <figcaption className="flex items-center gap-2 p-3"><img src={stop.gemImg} alt="" className="h-8 w-8" /><div className="flex-1"><p className="font-bold">{stop.gemName}</p><p className="text-xs text-muted-foreground">{stop.place} · {new Date(photo.takenAt).toLocaleString()}</p></div>
+      <button onClick={() => downloadBlob(photo.blob, name)} aria-label={`Download ${stop.gemName} photo`} className="grid h-11 w-11 place-items-center rounded-full bg-card"><Download className="h-4 w-4" /></button>
+      <button onClick={() => void share(photo.blob, name)} aria-label={`Share ${stop.gemName} photo`} className="grid h-11 w-11 place-items-center rounded-full bg-card"><Share2 className="h-4 w-4" /></button>
+    </figcaption>
+  </figure>;
 }
 
 function ResetBtn({ g }: { g: G }) {

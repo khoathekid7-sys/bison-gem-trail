@@ -111,13 +111,13 @@ export const verifyCapture = createServerFn({ method: "POST" })
     // Validate the image: declared MIME, magic bytes, size.
     const m = data.image.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
     if (!m || !ALLOWED_MIME.includes(m[1] as (typeof ALLOWED_MIME)[number])) throw new Error("Unsupported image format.");
-    const bin = Uint8Array.from(atob(m[2]), (c) => c.charCodeAt(0));
+    const bin = Uint8Array.from(atob(m[2]!), (c) => c.charCodeAt(0));
     if (bin.length > MAX_IMAGE_BYTES || bin.length < 2000) throw new Error("Image size is out of range.");
     const magicOk = (m[1] === "image/jpeg" && bin[0] === 0xff && bin[1] === 0xd8) || (m[1] === "image/png" && bin[0] === 0x89 && bin[1] === 0x50) || (m[1] === "image/webp" && bin[8] === 0x57 && bin[9] === 0x45);
     if (!magicOk) throw new Error("That file isn't a valid image.");
 
     const path = `${session.id}/${stop.id}-${data.attemptId}.jpg`;
-    const up = await db.storage.from("captures").upload(path, bin, { contentType: m[1], upsert: true });
+    const up = await db.storage.from("captures").upload(path, bin, { contentType: m[1]!, upsert: true });
     if (up.error) throw new Error("Upload failed. Please retry.");
 
     const { data: row } = await db.from("captures").upsert({ ...base, storage_path: path, status: "error", location_passed: true, photo_passed: false, reason: "Checking…" }, { onConflict: "session_id,client_capture_id" }).select("id").single();

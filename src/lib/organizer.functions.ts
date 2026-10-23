@@ -69,7 +69,7 @@ export const uploadReference = createServerFn({ method: "POST" })
     const db = await requireOrganizer(context as Ctx);
     const m = data.image.match(/^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/);
     if (!m) throw new Error("Upload a JPEG.");
-    const bin = Uint8Array.from(atob(m[1]), (c) => c.charCodeAt(0));
+    const bin = Uint8Array.from(atob(m[1]!), (c) => c.charCodeAt(0));
     if (bin[0] !== 0xff || bin[1] !== 0xd8 || bin.length > 3 * 1024 * 1024) throw new Error("Invalid image.");
     const { count } = await db.from("reference_photos").select("id", { count: "exact", head: true }).eq("stop_id", data.stopId);
     if ((count ?? 0) >= 3) throw new Error("Maximum 3 reference photos per stop. Delete one first.");

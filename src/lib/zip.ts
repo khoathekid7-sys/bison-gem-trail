@@ -11,7 +11,7 @@ const table = (() => {
 
 export function crc32(data: Uint8Array): number {
   let c = 0xffffffff;
-  for (let i = 0; i < data.length; i++) c = table[(c ^ data[i]) & 0xff] ^ (c >>> 8);
+  for (let i = 0; i < data.length; i++) c = table[(c ^ data[i]!) & 0xff]! ^ (c >>> 8);
   return (c ^ 0xffffffff) >>> 0;
 }
 

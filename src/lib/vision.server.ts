@@ -1,4 +1,6 @@
 // Server-only: landmark photo check via Lovable AI Gateway (Gemini vision).
+import { z } from "zod";
+
 const MODEL = "google/gemini-3-flash-preview";
 
 export type VisionResult = {
@@ -31,6 +33,16 @@ const schema = {
     retry_tip: { type: "string" },
   },
 };
+
+const resultSchema = z.object({
+  matches_landmark: z.boolean(),
+  confidence: z.number().min(0).max(1),
+  is_screen_or_print: z.boolean(),
+  too_blurry_or_dark: z.boolean(),
+  insufficient_context: z.boolean(),
+  reason: z.string(),
+  retry_tip: z.string(),
+});
 
 export async function checkLandmark(opts: {
   apiKey: string;
@@ -81,7 +93,7 @@ export async function checkLandmark(opts: {
   if (!res.ok || !res.body) {
     let msg = `AI check unavailable (${res.status}).`;
     if (res.status === 429) msg = "The photo checker is busy. Please retry in a moment.";
-    if (res.status === 402) msg = "The photo checker is out of credits. The organizer has been notified.";
+    if (res.status === 402) msg = "The photo checker is out of credits. Ask the organizer to check the AI service.";
     throw new VisionServiceError(msg, res.status);
   }
 
@@ -111,11 +123,8 @@ export async function checkLandmark(opts: {
   }
   try {
     const m = text.match(/\{[\s\S]*\}/);
-    const parsed = JSON.parse(m ? m[0] : text) as VisionResult;
-    parsed.confidence = Math.max(0, Math.min(1, Number(parsed.confidence) || 0));
-    parsed.reason = String(parsed.reason ?? "").slice(0, 240);
-    parsed.retry_tip = String(parsed.retry_tip ?? "").slice(0, 240);
-    return parsed;
+    const parsed = resultSchema.parse(JSON.parse(m ? m[0] : text));
+    return { ...parsed, reason: parsed.reason.slice(0, 240), retry_tip: parsed.retry_tip.slice(0, 240) };
   } catch {
     throw new VisionServiceError("The photo checker returned an unreadable answer. Please retry.");
   }

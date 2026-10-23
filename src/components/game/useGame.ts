@@ -127,6 +127,9 @@ export function useGame() {
     else if (active) setFix({ lat: active.lat + 0.00008, lng: active.lng, accuracy: 6, timestamp: t });
     setGps("ok");
   }, [active]);
+  useEffect(() => {
+    if (hydrated && mode === "demo" && !fix) demoMove("start");
+  }, [hydrated, mode, fix, demoMove]);
   // keep demo fix "fresh" unless the error case is chosen
   useEffect(() => {
     if (mode !== "demo" || !fix || fix.accuracy > 40) return;
