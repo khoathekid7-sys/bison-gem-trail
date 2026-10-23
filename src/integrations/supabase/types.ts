@@ -14,16 +14,217 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      captures: {
+        Row: {
+          accuracy_m: number | null
+          client_capture_id: string
+          confidence: number | null
+          created_at: string
+          distance_m: number | null
+          id: string
+          location_passed: boolean
+          photo_passed: boolean
+          reason: string | null
+          retry_tip: string | null
+          review_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          session_id: string
+          status: string
+          stop_id: string
+          storage_path: string | null
+        }
+        Insert: {
+          accuracy_m?: number | null
+          client_capture_id: string
+          confidence?: number | null
+          created_at?: string
+          distance_m?: number | null
+          id?: string
+          location_passed?: boolean
+          photo_passed?: boolean
+          reason?: string | null
+          retry_tip?: string | null
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          session_id: string
+          status: string
+          stop_id: string
+          storage_path?: string | null
+        }
+        Update: {
+          accuracy_m?: number | null
+          client_capture_id?: string
+          confidence?: number | null
+          created_at?: string
+          distance_m?: number | null
+          id?: string
+          location_passed?: boolean
+          photo_passed?: boolean
+          reason?: string | null
+          retry_tip?: string | null
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          session_id?: string
+          status?: string
+          stop_id?: string
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "captures_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "hunt_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "captures_stop_id_fkey"
+            columns: ["stop_id"]
+            isOneToOne: false
+            referencedRelation: "stops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      hunt_sessions: {
+        Row: {
+          attempt_times: string[]
+          completed_at: string | null
+          created_at: string
+          current_step: number
+          id: string
+          token_hash: string
+        }
+        Insert: {
+          attempt_times?: string[]
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          id?: string
+          token_hash: string
+        }
+        Update: {
+          attempt_times?: string[]
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number
+          id?: string
+          token_hash?: string
+        }
+        Relationships: []
+      }
+      reference_photos: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          stop_id: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          stop_id: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          stop_id?: string
+          storage_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reference_photos_stop_id_fkey"
+            columns: ["stop_id"]
+            isOneToOne: false
+            referencedRelation: "stops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stops: {
+        Row: {
+          calibrated: boolean
+          calibrated_at: string | null
+          calibrated_by: string | null
+          id: string
+          landmark_description: string
+          lat: number
+          lng: number
+          name: string
+          provenance: string
+          radius_m: number
+          step: number
+        }
+        Insert: {
+          calibrated?: boolean
+          calibrated_at?: string | null
+          calibrated_by?: string | null
+          id: string
+          landmark_description: string
+          lat: number
+          lng: number
+          name: string
+          provenance: string
+          radius_m?: number
+          step: number
+        }
+        Update: {
+          calibrated?: boolean
+          calibrated_at?: string | null
+          calibrated_by?: string | null
+          id?: string
+          landmark_description?: string
+          lat?: number
+          lng?: number
+          name?: string
+          provenance?: string
+          radius_m?: number
+          step?: number
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      accept_capture: { Args: { p_capture: string }; Returns: boolean }
+      claim_first_organizer: { Args: never; Returns: boolean }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "organizer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +351,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["organizer"],
+    },
   },
 } as const
